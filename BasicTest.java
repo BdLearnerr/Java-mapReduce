@@ -76,7 +76,7 @@ public static class  Name implements Serializable {
   }
   public static Dataset<Row> calcFunction(SparkSession sparkSession, Dataset<Name> ds , String x_cod ){
       Dataset<Row> ds_res = 
-    		   ds.withColumn("codeName", concat(col("countryisocode"), lit("_"),lit(x_cod)));
+    		   ds.withColumn("codeName", concat(col("codeName"), lit("_"),lit(x_cod)));
       return ds_res ; 
   }
   
