@@ -67,7 +67,8 @@ public static class  Name implements Serializable {
     
     Dataset<Name> rsDs = ds.map((MapFunction<String, Dataset>) x -> calcFunction(spark, nameDs,x) ,  nameEncoder);
     		//.reduce(func)
-    
+    //Getting error
+    // The method map(Function1<String,U>, Encoder<U>) in the type Dataset<String> is not applicable for the arguments (MapFunction<String,Dataset>, Encoder<BasicTest.Name>)
     //a.show();
     
 
