@@ -1,7 +1,11 @@
+package pairs;
+
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.api.java.function.ReduceFunction;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -9,13 +13,12 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.Encoders;
 
-import dataset.JavaBean.Number;
-
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.lit;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -26,25 +29,6 @@ import scala.Tuple2;
 public class BasicTest {
 	
 
-public static class  Name implements Serializable {
-    private String codeName;
-    
-    public  Name(){
-	}
-	public Name(String n ){
-		this.codeName = n;
-	}
-
-	public String getCodeName() {
-		return codeName;
-	}
-
-	public void setCodeName(String codeName) {
-		this.codeName = codeName;
-	}
-	
-}
-
   public static void main(String[] args) {
     SparkSession spark = SparkSession
         .builder()
@@ -54,29 +38,42 @@ public static class  Name implements Serializable {
 
     JavaSparkContext sc = new JavaSparkContext(spark.sparkContext());
     
-    List<String> data = Arrays.asList("hello","world");
-   // Dataset<Row> ds = spark.createDataset(data, Encoders.STRING()).toDF("type");
-    
-    Dataset<String> ds = spark.createDataset(data, Encoders.STRING());
+    List<String> data = Arrays.asList("group1","group2"); //groupBy
+    Dataset<String> groups = spark.createDataset(data, Encoders.STRING());
     
     
-    List<Name> nameList =  Arrays.asList(new Name("hi"),new Name("bye"));
+    List<Name> nameList =  Arrays.asList(new Name("hi"),new Name("bye")); //greating
     Encoder<Name> nameEncoder =  Encoders.bean(Name.class);
     Dataset<Name> nameDs = spark.createDataset(nameList,nameEncoder);
     
-    
-    Dataset<Name> rsDs = ds.map((MapFunction<String, Dataset>) x -> calcFunction(spark, nameDs,x) ,  nameEncoder);
-    		//.reduce(func)
-    //Getting error
-    // The method map(Function1<String,U>, Encoder<U>) in the type Dataset<String> is not applicable for the arguments (MapFunction<String,Dataset>, Encoder<BasicTest.Name>)
-    //a.show();
-    
+    Dataset<Name> rsDs = groups.map( (MapFunction<String,  Name>) code -> {
+    	    System.out.println(" code :" + code);
+    	    
+    	   return calcFunction(spark, nameDs, code);
+    	} ,nameEncoder);
+    	.reduce(  (ds1, ds2) -> {
+    		
+    		return ds1.union(ds2);
+    		
+    		/*List<Name> ll = new ArrayList<>();
+    		ll.add(ds1);
+    		ll.add(ds2);
+    		
+    		return ll;*/
+    		
+    	},nameEncoder));
+
 
     spark.stop();
   }
-  public static Dataset<Row> calcFunction(SparkSession sparkSession, Dataset<Name> ds , String x_cod ){
-      Dataset<Row> ds_res = 
-    		   ds.withColumn("codeName", concat(col("codeName"), lit("_"),lit(x_cod)));
+  
+  public static Dataset<Name> calcFunction(SparkSession sparkSession, Dataset<Name> ds , String x_code ){
+         //this is actually a complex logic , for simplicity written like this
+	  Dataset<Name> ds_res = 
+    		           ds.withColumn("codeName", concat(col("codeName"), lit("_"),lit(x_code)))
+    		             .as(Encoders.bean(Name.class));
+           //write
+      
       return ds_res ; 
   }
   
